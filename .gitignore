@@ -1,3 +1,6 @@
+# jetbrain ide env
+.idea
+
 # Logs
 logs
 *.log
