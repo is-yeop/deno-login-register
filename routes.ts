@@ -1,7 +1,14 @@
 import {RouterContext} from "https://deno.land/x/oak/mod.ts";
 import {renderFileToString} from "https://deno.land/x/dejs/mod.ts";
 import {hashSync, compareSync} from "https://deno.land/x/bcrypt/mod.ts";
+import {create, getNumericDate, Payload, Header} from "https://deno.land/x/djwt/mod.ts";
 import {users, User} from "./users.ts";
+
+const key = "awesome-random-string";
+const header: Header = {
+    alg: "HS256",
+    typ: "JWT"
+}
 
 export const home = async (ctx: RouterContext) => {
     ctx.response.body = await renderFileToString(`${Deno.cwd()}/views/home.ejs`, {});
@@ -26,7 +33,7 @@ export const postLogin = async (ctx: RouterContext) => {
     const username = value.get('username');
     const password = value.get('password');
 
-    const user = users.find((u: User)=> u.username === username)
+    const user = users.find((u: User) => u.username === username)
     if (!user) {
         ctx.response.body = await renderFileToString(`${Deno.cwd()}/views/login.ejs`, {
             error: "Incorrect username"
@@ -37,6 +44,13 @@ export const postLogin = async (ctx: RouterContext) => {
         });
     } else {
         console.log("Success");
+        const payload: Payload = {
+            iss: user.username,
+            exp: getNumericDate(60 * 60)
+        }
+        const jwt = await create(header, payload, key);
+        ctx.cookies.set('jwt', jwt);
+        ctx.response.redirect('/');
     }
 }
 
