@@ -2,16 +2,20 @@ import {RouterContext} from "https://deno.land/x/oak/mod.ts";
 import {renderFileToString} from "https://deno.land/x/dejs/mod.ts";
 import {hashSync, compareSync} from "https://deno.land/x/bcrypt/mod.ts";
 import {create, getNumericDate, Payload, Header} from "https://deno.land/x/djwt/mod.ts";
+import type {Algorithm} from "https://deno.land/x/djwt/algorithm.ts";
 import {users, User} from "./users.ts";
+import "https://deno.land/x/dotenv/load.ts"
 
-const key = "awesome-random-string";
 const header: Header = {
-    alg: "HS256",
+    alg: Deno.env.get('ALG') as Algorithm || 'none',
     typ: "JWT"
 }
 
 export const home = async (ctx: RouterContext) => {
-    ctx.response.body = await renderFileToString(`${Deno.cwd()}/views/home.ejs`, {});
+    const currentUser = ctx.state.currentUser;
+    ctx.response.body = await renderFileToString(`${Deno.cwd()}/views/home.ejs`, {
+        user: currentUser,
+    });
 }
 
 export const login = async (ctx: RouterContext) => {
@@ -48,7 +52,7 @@ export const postLogin = async (ctx: RouterContext) => {
             iss: user.username,
             exp: getNumericDate(60 * 60)
         }
-        const jwt = await create(header, payload, key);
+        const jwt = await create(header, payload, Deno.env.get("JWT_KEY") || '');
         ctx.cookies.set('jwt', jwt);
         ctx.response.redirect('/');
     }
@@ -71,5 +75,6 @@ export const postRegister = async (ctx: RouterContext) => {
 }
 
 export const logout = async (ctx: RouterContext) => {
-    ctx.response.body = await renderFileToString(`${Deno.cwd()}/views/logout.ejs`, {});
+    ctx.cookies.delete('jwt');
+    ctx.response.redirect('/');
 }
